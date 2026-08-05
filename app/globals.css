@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #ffffff;
+  color: #172033;
+  font-family: "Trebuchet MS", "Avenir Next", Avenir, Arial, sans-serif;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(164, 214, 94, .22), transparent 25rem),
+    radial-gradient(circle at 92% 12%, rgba(107, 16, 54, .08), transparent 28rem), #fff;
+}
+
+.dark body {
+  background: #17101a;
+  color: #f8fafc;
+}
+
+.page-orb { position: absolute; border-radius: 9999px; filter: blur(2px); pointer-events: none; }
+.floaty { animation: floaty 6s ease-in-out infinite; }
+@keyframes floaty { 50% { transform: translateY(-10px) rotate(2deg); } }
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #fbbf24;
+  outline-offset: 3px;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 240ms ease-out;
+}
