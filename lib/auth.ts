@@ -23,5 +23,5 @@ export async function getUserProfile(user: User): Promise<UserProfile> {
 export async function signOutUser() { await signOut(auth); }
 
 export async function savePracticeResult(userId: string, result: SessionResult) {
-  await setDoc(doc(db, "users", userId, "practiceResults", result.id), { ...result, createdAt: serverTimestamp() });
+  await setDoc(doc(db, "users", userId, "practiceResults", result.id), { ...result, userId, createdAt: serverTimestamp() });
 }
