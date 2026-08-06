@@ -13,6 +13,8 @@ export interface AnswerRecord {
   correct: boolean;
   accuracy: number;
   points: number;
+  responseTimeSeconds: number;
+  replaysUsed: number;
 }
 
 export interface SessionResult {
@@ -24,6 +26,7 @@ export interface SessionResult {
   incorrectAnswers: number;
   accuracy: number;
   completionTimeSeconds: number;
+  wordsPerMinute: number;
   score: number;
   xp: number;
   date: string;

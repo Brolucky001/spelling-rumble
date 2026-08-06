@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
-import { formatTime, getAnswerAccuracy, isCorrectAnswer, pointsByDifficulty } from "@/utils/scoring";
+import { formatTime, getAnswerAccuracy, isCorrectAnswer, pointsByDifficulty, timeLimitByDifficulty } from "@/utils/scoring";
 import type { AnswerRecord, Difficulty, Question } from "@/types";
 
 interface PracticeScreenProps {
@@ -18,10 +18,13 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
   const [feedback, setFeedback] = useState<AnswerRecord | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [questionElapsedSeconds, setQuestionElapsedSeconds] = useState(0);
   const [score, setScore] = useState(0);
   const { isSpeaking, speak } = useSpeechSynthesis();
 
   const question = questions[currentIndex];
+  const timeLimit = timeLimitByDifficulty[difficulty];
+  const timeRemaining = Math.max(0, timeLimit - questionElapsedSeconds);
   const progress = useMemo(
     () => Math.round(((feedback ? currentIndex + 1 : currentIndex) / questions.length) * 100),
     [currentIndex, feedback, questions.length]
@@ -33,14 +36,17 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
   }, []);
 
   useEffect(() => {
+    if (feedback) return;
+    const timer = window.setInterval(() => setQuestionElapsedSeconds((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [currentIndex, feedback]);
+
+  useEffect(() => {
     setResponse("");
     setPlays(0);
     setFeedback(null);
+    setQuestionElapsedSeconds(0);
   }, [currentIndex]);
-
-  if (!question) {
-    return null;
-  }
 
   function playAudio() {
     if (plays >= 3 || isSpeaking || feedback) return;
@@ -48,8 +54,8 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
     speak(question.sentence);
   }
 
-  function submitAnswer() {
-    if (feedback) return;
+  const submitAnswer = useCallback(() => {
+    if (feedback || !question) return;
     const correct = isCorrectAnswer(response, question.sentence);
     const accuracy = getAnswerAccuracy(response, question.sentence);
     const points = correct ? pointsByDifficulty[difficulty] : 0;
@@ -59,7 +65,9 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
       response,
       correct,
       accuracy,
-      points
+      points,
+      responseTimeSeconds: questionElapsedSeconds,
+      replaysUsed: Math.max(0, plays - 1)
     };
     setScore((value) => value + points);
     const nextAnswers = [...answers, record];
@@ -73,6 +81,14 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
         setCurrentIndex((value) => value + 1);
       }
     }, 2000);
+  }, [answers, currentIndex, difficulty, feedback, onFinish, plays, question, questionElapsedSeconds, questions.length, response]);
+
+  useEffect(() => {
+    if (timeRemaining === 0 && !feedback) submitAnswer();
+  }, [timeRemaining, feedback, submitAnswer]);
+
+  if (!question) {
+    return null;
   }
 
   return (
@@ -87,7 +103,7 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
             </p>
             <h1 className="mt-1 text-3xl font-black text-slate-950 dark:text-white">{difficulty} arena</h1>
           </div>
-          <div className="flex gap-2"><div className="rounded-md bg-primary-50 px-4 py-2 text-lg font-black text-primary-700 dark:bg-slate-900 dark:text-gold-400">{formatTime(elapsedSeconds)}</div><div className="rounded-md bg-gold-100 px-4 py-2 text-lg font-black text-[#527d18]">{score} XP</div></div>
+          <div className="flex gap-2"><div className="rounded-md bg-primary-50 px-4 py-2 text-lg font-black text-primary-700 dark:bg-slate-900 dark:text-gold-400">{formatTime(elapsedSeconds)}</div><div className={`rounded-md px-4 py-2 text-lg font-black ${timeRemaining <= 10 ? "bg-red-100 text-red-700" : "bg-gold-100 text-[#527d18]"}`}>{formatTime(timeRemaining)}</div><div className="rounded-md bg-gold-100 px-4 py-2 text-lg font-black text-[#527d18]">{score} XP</div></div>
         </div>
 
         <div className="mb-7 h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
@@ -118,7 +134,7 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
             className="min-h-40 resize-y rounded-xl border border-primary-100 bg-primary-50 p-4 text-xl leading-8 text-slate-950 shadow-inner transition focus:border-primary-600 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
             autoFocus
           />
-          <span className="text-right text-sm font-bold text-slate-400">{response.length} characters</span>
+          <span className="text-right text-sm font-bold text-slate-400">{response.length} characters · {formatTime(timeRemaining)} remaining</span>
         </label>
 
         <button
@@ -131,7 +147,7 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
         </button>
 
         {feedback && (
-          <div className="mt-6 animate-fade-in rounded-xl border border-primary-100 bg-primary-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+          <div aria-live="polite" className="mt-6 animate-fade-in rounded-xl border border-primary-100 bg-primary-50 p-4 dark:border-slate-700 dark:bg-slate-900">
             <p className={`text-2xl font-black ${feedback.correct ? "text-green-600" : "text-red-600"}`}>
               {feedback.correct ? "Correct" : "Incorrect"}
             </p>

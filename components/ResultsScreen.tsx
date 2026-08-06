@@ -35,6 +35,7 @@ export function ResultsScreen({ result, leaderboard, onRestart, onHome }: Result
           <ResultStat label="Accuracy" value={`${result.accuracy}%`} />
           <ResultStat label="XP earned" value={result.xp.toString()} />
           <ResultStat label="Time" value={formatTime(result.completionTimeSeconds)} />
+          <ResultStat label="Typing speed" value={`${result.wordsPerMinute} WPM`} />
           <ResultStat label="Difficulty" value={result.difficulty} />
         </dl>
 

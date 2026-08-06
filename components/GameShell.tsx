@@ -6,6 +6,7 @@ import { PracticeScreen } from "@/components/PracticeScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { pickSessionQuestions } from "@/utils/questions";
+import { getWordsPerMinute } from "@/utils/scoring";
 import type { AnswerRecord, Difficulty, Question, SessionResult } from "@/types";
 
 type Screen = "home" | "practice" | "results";
@@ -76,6 +77,10 @@ export function GameShell() {
     const completionTimeSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
     const accuracy = Math.round(answers.reduce((sum, answer) => sum + answer.accuracy, 0) / totalQuestions);
     const score = answers.reduce((sum, answer) => sum + answer.points, 0);
+    const wordsTyped = answers.reduce(
+      (sum, answer) => sum + answer.response.trim().split(/\s+/).filter(Boolean).length,
+      0
+    );
     const result: SessionResult = {
       id: crypto.randomUUID(),
       studentName: studentName.trim(),
@@ -85,6 +90,7 @@ export function GameShell() {
       incorrectAnswers: totalQuestions - correctAnswers,
       accuracy,
       completionTimeSeconds,
+      wordsPerMinute: getWordsPerMinute(wordsTyped, completionTimeSeconds),
       score,
       xp: score,
       date: new Date().toISOString(),

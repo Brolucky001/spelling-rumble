@@ -18,6 +18,20 @@ export function getAnswerAccuracy(response: string, sentence: string) {
   return Math.round((matches / length) * 100);
 }
 
+export function getWordsPerMinute(wordsTyped: number, elapsedSeconds: number) {
+  if (wordsTyped === 0 || elapsedSeconds === 0) return 0;
+  return Math.round((wordsTyped / elapsedSeconds) * 60);
+}
+
+export const timeLimitByDifficulty = {
+  Beginner: 45,
+  Easy: 50,
+  Medium: 60,
+  Hard: 75,
+  Professional: 90,
+  Expert: 90
+} as const;
+
 export const pointsByDifficulty = { Beginner: 10, Easy: 15, Medium: 25, Hard: 50, Professional: 75, Expert: 100 } as const;
 
 export function formatTime(totalSeconds: number) {
