@@ -1,4 +1,5 @@
 export type Difficulty = "Beginner" | "Easy" | "Medium" | "Hard" | "Professional" | "Expert";
+export type PortalRole = "student" | "school" | "administrator";
 
 export interface Question {
   id: number;

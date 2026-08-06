@@ -5,11 +5,12 @@ import { HomeScreen } from "@/components/HomeScreen";
 import { PracticeScreen } from "@/components/PracticeScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { RoleDashboard } from "@/components/RoleDashboard";
 import { pickSessionQuestions } from "@/utils/questions";
 import { getWordsPerMinute } from "@/utils/scoring";
-import type { AnswerRecord, Difficulty, Question, SessionResult } from "@/types";
+import type { AnswerRecord, Difficulty, PortalRole, Question, SessionResult } from "@/types";
 
-type Screen = "home" | "practice" | "results";
+type Screen = "home" | "practice" | "results" | "dashboard";
 
 const storageKey = "spelling-rumble-results";
 
@@ -34,6 +35,7 @@ export function GameShell() {
   const [latestResult, setLatestResult] = useState<SessionResult | null>(null);
   const [results, setResults] = useState<SessionResult[]>([]);
   const [darkMode, setDarkMode] = useState(false);
+  const [role, setRole] = useState<PortalRole>("student");
 
   useEffect(() => {
     setResults(readResults());
@@ -116,6 +118,10 @@ export function GameShell() {
           <div className="flex items-center gap-3"><span className="hidden rounded-full bg-gold-100 px-3 py-1.5 text-xs font-black text-[#527d18] sm:block">⚡ Daily streak: 3</span><ThemeToggle darkMode={darkMode} onToggle={() => setDarkMode((value) => !value)} /></div>
         </header>
 
+        <nav aria-label="Portal selection" className="mb-5 flex flex-wrap gap-2">
+          {(["student", "school", "administrator"] as PortalRole[]).map((item) => <button key={item} type="button" onClick={() => { setRole(item); setScreen("dashboard"); }} className={`rounded-full px-4 py-2 text-sm font-black capitalize ${screen === "dashboard" && role === item ? "bg-primary-600 text-white" : "bg-primary-50 text-primary-700 dark:bg-slate-800 dark:text-gold-400"}`}>{item === "administrator" ? "Admin" : item}</button>)}
+        </nav>
+
         {screen === "home" && (
           <HomeScreen
             difficulty={difficulty}
@@ -143,6 +149,7 @@ export function GameShell() {
             onRestart={startPractice}
           />
         )}
+        {screen === "dashboard" && <RoleDashboard role={role} onPractice={() => setScreen("home")} />}
       </div>
     </main>
   );
