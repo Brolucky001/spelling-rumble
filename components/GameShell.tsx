@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { HomeScreen } from "@/components/HomeScreen";
 import { PracticeScreen } from "@/components/PracticeScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RoleDashboard } from "@/components/RoleDashboard";
+import { AuthPanel } from "@/components/AuthPanel";
+import { auth } from "@/lib/firebase";
+import { getUserProfile, savePracticeResult, signIn, signOutUser, signUp } from "@/lib/auth";
 import { pickSessionQuestions } from "@/utils/questions";
 import { getWordsPerMinute } from "@/utils/scoring";
 import type { AnswerRecord, Difficulty, PortalRole, Question, SessionResult } from "@/types";
 
-type Screen = "home" | "practice" | "results" | "dashboard";
+type Screen = "home" | "practice" | "results" | "dashboard" | "auth";
 
 const storageKey = "spelling-rumble-results";
 
@@ -36,6 +40,7 @@ export function GameShell() {
   const [results, setResults] = useState<SessionResult[]>([]);
   const [darkMode, setDarkMode] = useState(false);
   const [role, setRole] = useState<PortalRole>("student");
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     setResults(readResults());
@@ -48,6 +53,19 @@ export function GameShell() {
     document.documentElement.classList.toggle("dark", darkMode);
     window.localStorage.setItem("spelling-rumble-theme", darkMode ? "dark" : "light");
   }, [darkMode]);
+
+  useEffect(() => onAuthStateChanged(auth, async (nextUser) => {
+    setUser(nextUser);
+    if (!nextUser) return;
+    try {
+      const profile = await getUserProfile(nextUser);
+      setStudentName(profile.displayName);
+      setRole(profile.role);
+    } catch {
+      setStudentName(nextUser.displayName ?? "Student");
+      setRole("student");
+    }
+  }), []);
 
   const leaderboard = useMemo(
     () =>
@@ -73,7 +91,7 @@ export function GameShell() {
     setScreen("practice");
   }
 
-  function finishPractice(answers: AnswerRecord[]) {
+  async function finishPractice(answers: AnswerRecord[]) {
     const correctAnswers = answers.filter((answer) => answer.correct).length;
     const totalQuestions = answers.length;
     const completionTimeSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
@@ -100,6 +118,13 @@ export function GameShell() {
     };
     setLatestResult(result);
     persistResults([result, ...results]);
+    if (user) {
+      try {
+        await savePracticeResult(user.uid, result);
+      } catch {
+        // Practice data remains stored locally if Firestore cannot be reached.
+      }
+    }
     setScreen("results");
   }
 
@@ -118,8 +143,8 @@ export function GameShell() {
           <div className="flex items-center gap-3"><span className="hidden rounded-full bg-gold-100 px-3 py-1.5 text-xs font-black text-[#527d18] sm:block">⚡ Daily streak: 3</span><ThemeToggle darkMode={darkMode} onToggle={() => setDarkMode((value) => !value)} /></div>
         </header>
 
-        <nav aria-label="Portal selection" className="mb-5 flex flex-wrap gap-2">
-          {(["student", "school", "administrator"] as PortalRole[]).map((item) => <button key={item} type="button" onClick={() => { setRole(item); setScreen("dashboard"); }} className={`rounded-full px-4 py-2 text-sm font-black capitalize ${screen === "dashboard" && role === item ? "bg-primary-600 text-white" : "bg-primary-50 text-primary-700 dark:bg-slate-800 dark:text-gold-400"}`}>{item === "administrator" ? "Admin" : item}</button>)}
+        <nav aria-label="Account workspace" className="mb-5 flex flex-wrap gap-2">
+          {user ? <><button type="button" onClick={() => setScreen("dashboard")} className="rounded-full bg-primary-50 px-4 py-2 text-sm font-black capitalize text-primary-700 dark:bg-slate-800 dark:text-gold-400">{role === "administrator" ? "Admin" : role} workspace</button><button type="button" onClick={() => void signOutUser()} className="rounded-full border border-primary-100 px-4 py-2 text-sm font-black text-primary-700 dark:border-slate-600 dark:text-gold-400">Sign out</button></> : <button type="button" onClick={() => setScreen("auth")} className="rounded-full bg-primary-600 px-4 py-2 text-sm font-black text-white">Sign in or create an account</button>}
         </nav>
 
         {screen === "home" && (
@@ -150,6 +175,7 @@ export function GameShell() {
           />
         )}
         {screen === "dashboard" && <RoleDashboard role={role} onPractice={() => setScreen("home")} />}
+        {screen === "auth" && <AuthPanel onSignIn={async (email, password) => { await signIn(email, password); setScreen("dashboard"); }} onSignUp={async (name, email, password) => { await signUp(name, email, password); setScreen("dashboard"); }} />}
       </div>
     </main>
   );
