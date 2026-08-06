@@ -1,4 +1,6 @@
 import { difficulties, sessionLengths } from "@/utils/questions";
+import { HistoryPanel } from "@/components/HistoryPanel";
+import { ProgressPanel } from "@/components/ProgressPanel";
 import type { Difficulty, SessionResult } from "@/types";
 
 interface HomeScreenProps {
@@ -16,7 +18,7 @@ const levels: Record<Difficulty, { label: string; words: string; color: string }
   Expert: { label: "Level 6", words: "16+ words", color: "bg-[#EEE7F7] text-[#7147A3]" }
 };
 
-export function HomeScreen({ studentName, difficulty, sessionLength, results, onStudentNameChange, onDifficultyChange, onSessionLengthChange, onStart }: HomeScreenProps) {
+export function HomeScreen({ studentName, difficulty, sessionLength, results, onDeleteHistory, onStudentNameChange, onDifficultyChange, onSessionLengthChange, onStart }: HomeScreenProps) {
   const total = results.length;
   const accuracy = total ? Math.round(results.reduce((sum, result) => sum + result.accuracy, 0) / total) : 0;
   return <div className="animate-fade-in pb-10">
@@ -48,6 +50,10 @@ export function HomeScreen({ studentName, difficulty, sessionLength, results, on
         </div>
       </div>
       <aside className="grid gap-6"><div className="rounded-[1.75rem] bg-[#1D1620] p-6 text-white shadow-soft"><p className="text-xs font-black tracking-widest text-gold-400">YOUR PROGRESS</p><div className="mt-5 grid grid-cols-2 gap-5"><Metric value={total.toString()} label="Games played" /><Metric value={`${accuracy}%`} label="Avg. accuracy" /><Metric value="0" label="Current XP" /><Metric value="—" label="Global rank" /></div><div className="mt-6 rounded-xl bg-white/10 p-4"><div className="flex justify-between text-sm font-bold"><span>Next badge</span><span className="text-gold-400">First Win</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full w-[15%] rounded-full bg-gold-500" /></div></div></div><div className="rounded-[1.75rem] border border-primary-100 bg-primary-50 p-6 dark:border-slate-700 dark:bg-slate-800"><p className="text-sm font-black text-primary-600">HOW IT WORKS</p><ol className="mt-4 grid gap-4 text-sm font-bold text-slate-700 dark:text-slate-200"><li><span className="mr-3 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-white">1</span>Listen closely to the sentence</li><li><span className="mr-3 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-white">2</span>Type exactly what you hear</li><li><span className="mr-3 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-white">3</span>Earn XP, streaks and badges</li></ol></div></aside>
+    </section>
+    <section className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
+      <ProgressPanel results={results} />
+      <HistoryPanel results={results} onDeleteHistory={onDeleteHistory} />
     </section>
   </div>;
 }

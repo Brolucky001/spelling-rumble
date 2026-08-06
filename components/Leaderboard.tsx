@@ -16,7 +16,7 @@ export function Leaderboard({ results }: LeaderboardProps) {
               <th className="py-3 pr-3 font-black">Rank</th>
               <th className="py-3 pr-3 font-black">Student</th>
               <th className="py-3 pr-3 font-black">Difficulty</th>
-              <th className="py-3 pr-3 font-black">Score</th>
+              <th className="py-3 pr-3 font-black">XP</th>
               <th className="py-3 pr-3 font-black">Accuracy</th>
               <th className="py-3 pr-3 font-black">Time</th>
               <th className="py-3 font-black">Date</th>
@@ -29,7 +29,7 @@ export function Leaderboard({ results }: LeaderboardProps) {
                 <td className="py-3 pr-3 font-bold">{result.studentName}</td>
                 <td className="py-3 pr-3">{result.difficulty}</td>
                 <td className="py-3 pr-3">
-                  {result.score}/{result.totalQuestions}
+                  {result.score}
                 </td>
                 <td className="py-3 pr-3">{result.accuracy}%</td>
                 <td className="py-3 pr-3">{formatTime(result.completionTimeSeconds)}</td>
