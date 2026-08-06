@@ -15,7 +15,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create: if ownsUser(userId) && request.resource.data.role == "student";
+      allow create: if ownsUser(userId) && (request.resource.data.role == "student" || request.resource.data.role == "school");
       allow read: if ownsUser(userId) || isAdministrator();
       allow update: if isAdministrator() || (ownsUser(userId) && request.resource.data.role == resource.data.role && request.resource.data.email == resource.data.email);
       allow delete: if isAdministrator();
@@ -25,6 +25,13 @@ service cloud.firestore {
         allow read: if ownsUser(userId) || isAdministrator();
         allow update, delete: if false;
       }
+    }
+
+    match /schools/{schoolId} {
+      allow create: if ownsUser(schoolId) && request.resource.data.ownerId == schoolId && request.resource.data.status == "pending";
+      allow read: if signedIn();
+      allow update: if isAdministrator() || (ownsUser(schoolId) && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.status == resource.data.status);
+      allow delete: if isAdministrator();
     }
   }
 }

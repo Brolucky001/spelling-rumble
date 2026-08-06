@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { RoleDashboard } from "@/components/RoleDashboard";
 import { AuthPanel } from "@/components/AuthPanel";
 import { auth } from "@/lib/firebase";
-import { getUserProfile, savePracticeResult, signIn, signOutUser, signUp } from "@/lib/auth";
+import { getPracticeResults, getUserProfile, savePracticeResult, signIn, signOutUser, signUp } from "@/lib/auth";
 import { pickSessionQuestions } from "@/utils/questions";
 import { getWordsPerMinute } from "@/utils/scoring";
 import type { AnswerRecord, Difficulty, PortalRole, Question, SessionResult } from "@/types";
@@ -61,6 +61,7 @@ export function GameShell() {
       const profile = await getUserProfile(nextUser);
       setStudentName(profile.displayName);
       setRole(profile.role);
+      setResults(await getPracticeResults(nextUser.uid));
     } catch {
       setStudentName(nextUser.displayName ?? "Student");
       setRole("student");
@@ -174,8 +175,8 @@ export function GameShell() {
             onRestart={startPractice}
           />
         )}
-        {screen === "dashboard" && <RoleDashboard role={role} onPractice={() => setScreen("home")} />}
-        {screen === "auth" && <AuthPanel onSignIn={async (email, password) => { await signIn(email, password); setScreen("dashboard"); }} onSignUp={async (name, email, password) => { await signUp(name, email, password); setScreen("dashboard"); }} />}
+        {screen === "dashboard" && <RoleDashboard role={role} results={results} onPractice={() => setScreen("home")} />}
+        {screen === "auth" && <AuthPanel onSignIn={async (email, password) => { await signIn(email, password); setScreen("dashboard"); }} onSignUp={async (name, email, password, accountRole) => { await signUp(name, email, password, accountRole); setScreen("dashboard"); }} />}
       </div>
     </main>
   );
