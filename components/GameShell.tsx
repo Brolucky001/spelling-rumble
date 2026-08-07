@@ -176,7 +176,7 @@ export function GameShell() {
             onRestart={startPractice}
           />
         )}
-        {screen === "dashboard" && <RoleDashboard role={role} results={results} onPractice={() => setScreen("home")} />}
+        {screen === "dashboard" && user && <RoleDashboard role={role} results={results} userId={user.uid} onPractice={() => setScreen("home")} />}
         {screen === "auth" && <AuthPanel onSignIn={async (email, password) => { await signIn(email, password); setScreen("dashboard"); }} onSignUp={async (name, email, password, accountRole) => { await signUp(name, email, password, accountRole); setScreen("dashboard"); }} />}
         {screen === "official" && <OfficialCompetitionPanel role={role} />}
       </div>
