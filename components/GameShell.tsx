@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { HomeScreen } from "@/components/HomeScreen";
 import { PracticeScreen } from "@/components/PracticeScreen";
@@ -141,7 +142,8 @@ export function GameShell() {
       <a href="#main-menu" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-primary-700">Skip to main menu</a>
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
         <header className="mb-6 flex items-center justify-between gap-4">
-          <button type="button" onClick={() => setScreen("home")} className="flex items-center gap-3 text-left">
+          <button type="button" onClick={() => setScreen("home")} className="event-brand flex items-center gap-3 text-left" aria-label="Spelling Rumble home">
+            <Image src="/spelling-rumble-logo.png" alt="Spelling Rumble" width={656} height={290} priority className="h-14 w-auto object-contain sm:h-16" />
             <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-600 text-xl text-gold-400 shadow-lg shadow-primary-600/20">✦</span>
             <span><span className="block text-xl font-black leading-none tracking-tight text-primary-600 dark:text-white">Spelling Rumble</span><span className="mt-1 block text-[10px] font-black tracking-[.16em] text-slate-400">LISTEN • TYPE • WIN</span></span>
           </button>

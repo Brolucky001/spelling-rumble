@@ -63,3 +63,7 @@ textarea:focus-visible {
 .animate-fade-in {
   animation: fade-in 240ms ease-out;
 }
+
+.event-brand > span {
+  display: none;
+}
