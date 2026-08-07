@@ -1,20 +1,33 @@
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile, type User } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { PortalRole } from "@/types";
 import type { SessionResult } from "@/types";
 
 export interface UserProfile { displayName: string; email: string; role: PortalRole; }
 
-export async function signIn(email: string, password: string) { await signInWithEmailAndPassword(auth, email, password); }
+export async function signIn(email: string, password: string) {
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+  await ensureSchoolRecord(credential.user);
+}
 
 export async function signUp(displayName: string, email: string, password: string, role: Extract<PortalRole, "student" | "teacher" | "school"> = "student") {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, { displayName });
-  await setDoc(doc(db, "users", credential.user.uid), { displayName, email: credential.user.email, role, createdAt: serverTimestamp() });
+  const batch = writeBatch(db);
+  batch.set(doc(db, "users", credential.user.uid), { displayName, email: credential.user.email, role, createdAt: serverTimestamp() });
   if (role === "school") {
-    await setDoc(doc(db, "schools", credential.user.uid), { name: displayName, ownerId: credential.user.uid, status: "pending", createdAt: serverTimestamp() });
+    batch.set(doc(db, "schools", credential.user.uid), { name: displayName, ownerId: credential.user.uid, status: "pending", createdAt: serverTimestamp() });
   }
+  await batch.commit();
+}
+
+async function ensureSchoolRecord(user: User) {
+  const profile = await getDoc(doc(db, "users", user.uid));
+  if (profile.data()?.role !== "school") return;
+  const schoolRef = doc(db, "schools", user.uid);
+  if ((await getDoc(schoolRef)).exists()) return;
+  await setDoc(schoolRef, { name: profile.data()?.displayName ?? user.displayName ?? "School", ownerId: user.uid, status: "pending", createdAt: serverTimestamp() });
 }
 
 export async function requestPasswordReset(email: string) {
