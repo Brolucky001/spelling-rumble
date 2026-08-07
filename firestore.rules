@@ -33,5 +33,15 @@ service cloud.firestore {
       allow update: if isAdministrator() || (ownsUser(schoolId) && request.resource.data.ownerId == resource.data.ownerId && request.resource.data.status == resource.data.status);
       allow delete: if isAdministrator();
     }
+
+    match /competitions/{competitionId} {
+      allow read, write: if false;
+      match /{document=**} { allow read, write: if false; }
+    }
+
+    match /leaderboards/{competitionId} {
+      allow read, write: if false;
+      match /{document=**} { allow read, write: if false; }
+    }
   }
 }
