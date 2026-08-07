@@ -8,13 +8,20 @@ import type { Difficulty, PortalRole } from "@/types";
 interface OfficialCompetitionPanelProps { role: PortalRole; }
 type AssignedQuestion = { id: number; sentence: string };
 
-async function api(path: string, body?: unknown) {
+async function api<T>(path: string, body?: unknown): Promise<T> {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error("Sign in to continue.");
-  const response = await fetch(path, { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error ?? "Request failed.");
-  return data;
+  let response: Response;
+  try {
+    response = await fetch(path, { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  } catch {
+    throw new Error("Cannot reach the app server. Restart the app with npm.cmd run dev, or redeploy the Vercel app after adding its server environment variables.");
+  }
+  const text = await response.text();
+  let data: unknown = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { data = { error: "The server returned an unexpected response." }; }
+  if (!response.ok) throw new Error(typeof data === "object" && data !== null && "error" in data && typeof data.error === "string" ? data.error : "Request failed.");
+  return data as T;
 }
 
 export function OfficialCompetitionPanel({ role }: OfficialCompetitionPanelProps) {
@@ -24,7 +31,7 @@ export function OfficialCompetitionPanel({ role }: OfficialCompetitionPanelProps
   const [notice, setNotice] = useState("");
   const { speak, isSpeaking } = useSpeechSynthesis();
 
-  async function start() { try { setNotice(""); const data = await api(`/api/competitions/${competitionId}/start`, {}); setQuestions(data.questions); } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to start."); } }
+  async function start() { try { setNotice(""); const data = await api<{ questions: AssignedQuestion[] }>(`/api/competitions/${competitionId}/start`, {}); setQuestions(data.questions); } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to start."); } }
   async function replay(questionId: number, sentence: string) { try { await api(`/api/competitions/${competitionId}/replay`, { questionId }); speak(sentence); } catch (error) { setNotice(error instanceof Error ? error.message : "Replay unavailable."); } }
   async function submit() { try { await api(`/api/competitions/${competitionId}/submit`, { responses: questions.map((question) => ({ questionId: question.id, response: responses[question.id] ?? "" })) }); setQuestions([]); setNotice("Official result submitted. Rankings update from the trusted server."); } catch (error) { setNotice(error instanceof Error ? error.message : "Submission failed."); } }
 
@@ -34,7 +41,7 @@ export function OfficialCompetitionPanel({ role }: OfficialCompetitionPanelProps
 
 function AdminCompetitionForm({ onCreated, notice }: { onCreated: (id: string) => void; notice: string }) {
   const [title, setTitle] = useState(""); const [difficulty, setDifficulty] = useState<Difficulty>("Beginner"); const [questionIds, setQuestionIds] = useState(""); const [registrationFee, setRegistrationFee] = useState("0"); const [startsAt, setStartsAt] = useState(""); const [endsAt, setEndsAt] = useState(""); const [error, setError] = useState("");
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); try { const data = await api("/api/competitions", { title, difficulty, startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(), questionIds: questionIds.split(",").map(Number).filter(Number.isInteger), registrationFee: Number(registrationFee), maxReplays: 2, timeLimitSeconds: 600, eligibleStudentIds: [] }); onCreated(data.id); } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create competition."); } }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); try { const data = await api<{ id: string }>("/api/competitions", { title, difficulty, startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(), questionIds: questionIds.split(",").map(Number).filter(Number.isInteger), registrationFee: Number(registrationFee), maxReplays: 2, timeLimitSeconds: 600, eligibleStudentIds: [] }); onCreated(data.id); } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create competition."); } }
   return <section className="mx-auto w-full max-w-3xl rounded-[1.75rem] border border-primary-100 bg-white p-6 shadow-soft dark:border-slate-700 dark:bg-slate-800"><p className="text-sm font-black tracking-widest text-primary-600">COMPETITION ADMINISTRATION</p><h1 className="mt-1 text-3xl font-black text-slate-950 dark:text-white">Create an official competition</h1><form onSubmit={submit} className="mt-6 grid gap-4"><input required value={title} onChange={(event) => setTitle(event.target.value)} className="rounded-lg border p-3 text-slate-950" placeholder="Competition title" /><select value={difficulty} onChange={(event) => setDifficulty(event.target.value as Difficulty)} className="rounded-lg border p-3 text-slate-950">{(["Beginner","Easy","Medium","Hard","Professional","Expert"] as Difficulty[]).map((item) => <option key={item}>{item}</option>)}</select><input required value={questionIds} onChange={(event) => setQuestionIds(event.target.value)} className="rounded-lg border p-3 text-slate-950" placeholder="Question IDs, e.g. 1,2,3,4,5" /><label className="font-bold">Starts at<input required type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} className="mt-1 w-full rounded-lg border p-3 text-slate-950" /></label><label className="font-bold">Ends at<input required type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} className="mt-1 w-full rounded-lg border p-3 text-slate-950" /></label><button className="rounded-lg bg-primary-600 px-5 py-3 font-black text-white">Create competition</button></form>{error && <p role="alert" className="mt-3 text-red-700">{error}</p>}{notice && <p role="status" className="mt-3 text-primary-700">{notice}</p>}<StudentAssignment /></section>;
 }
 
