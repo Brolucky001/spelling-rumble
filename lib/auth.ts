@@ -8,7 +8,7 @@ export interface UserProfile { displayName: string; email: string; role: PortalR
 
 export async function signIn(email: string, password: string) { await signInWithEmailAndPassword(auth, email, password); }
 
-export async function signUp(displayName: string, email: string, password: string, role: Extract<PortalRole, "student" | "school"> = "student") {
+export async function signUp(displayName: string, email: string, password: string, role: Extract<PortalRole, "student" | "teacher" | "school"> = "student") {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, { displayName });
   await setDoc(doc(db, "users", credential.user.uid), { displayName, email: credential.user.email, role, createdAt: serverTimestamp() });
@@ -20,7 +20,7 @@ export async function signUp(displayName: string, email: string, password: strin
 export async function getUserProfile(user: User): Promise<UserProfile> {
   const snapshot = await getDoc(doc(db, "users", user.uid));
   const data = snapshot.data();
-  return { displayName: data?.displayName ?? user.displayName ?? "Student", email: user.email ?? "", role: data?.role === "school" || data?.role === "administrator" ? data.role : "student" };
+  return { displayName: data?.displayName ?? user.displayName ?? "Student", email: user.email ?? "", role: data?.role === "teacher" || data?.role === "school" || data?.role === "administrator" ? data.role : "student" };
 }
 
 export async function signOutUser() { await signOut(auth); }

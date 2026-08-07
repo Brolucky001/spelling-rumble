@@ -15,7 +15,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create: if ownsUser(userId) && (request.resource.data.role == "student" || request.resource.data.role == "school");
+      allow create: if ownsUser(userId) && (request.resource.data.role == "student" || request.resource.data.role == "teacher" || request.resource.data.role == "school");
       allow read: if ownsUser(userId) || isAdministrator();
       allow update: if isAdministrator() || (ownsUser(userId) && request.resource.data.role == resource.data.role && request.resource.data.email == resource.data.email);
       allow delete: if isAdministrator();
