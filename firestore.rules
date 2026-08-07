@@ -49,5 +49,6 @@ service cloud.firestore {
     match /registrations/{registrationId} { allow read, write: if false; }
     match /invoices/{invoiceId} { allow read, write: if false; }
     match /receipts/{receiptId} { allow read, write: if false; }
+    match /auditLogs/{logId} { allow read, write: if false; }
   }
 }

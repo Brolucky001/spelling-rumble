@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { getAdminDb } from "@/lib/firebase-admin";
+import { requireUser } from "@/lib/official-competition";
+export const runtime = "nodejs";
+export async function GET(request: Request) { try { await requireUser(request, ["administrator"]); const { searchParams } = new URL(request.url); const competitionId = searchParams.get("competitionId"); if (!competitionId) throw new Error("Choose a competition before exporting."); const results = (await getAdminDb().collection(`competitions/${competitionId}/results`).get()).docs.map((item) => item.data()); const csv = ["Student,School,Score,Accuracy,Questions", ...results.map((result) => [result.studentName, result.schoolId ?? "", result.score, result.accuracy, result.totalQuestions].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))].join("\n"); return new NextResponse(csv, { headers: { "Content-Type": "text/csv", "Content-Disposition": `attachment; filename=spelling-rumble-${competitionId}.csv` } }); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to export report." }, { status: 400 }); } }
