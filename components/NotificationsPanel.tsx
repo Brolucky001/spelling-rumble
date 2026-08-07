@@ -1,0 +1,16 @@
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+import { auth } from "@/lib/firebase";
+import type { PortalRole } from "@/types";
+
+type Notice = { id: string; title: string; message: string; audience: string };
+async function request(path: string, body?: unknown) { const token = await auth.currentUser?.getIdToken(); const response = await fetch(path, { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined }); const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "Request failed."); return data; }
+
+export function NotificationsPanel({ role }: { role: PortalRole }) {
+  const [notices, setNotices] = useState<Notice[]>([]); const [error, setError] = useState(""); const [title, setTitle] = useState(""); const [message, setMessage] = useState(""); const [audience, setAudience] = useState("all");
+  async function load() { try { setNotices(await request("/api/notifications")); setError(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to load notifications."); } }
+  useEffect(() => { void load(); }, []);
+  async function publish(event: FormEvent<HTMLFormElement>) { event.preventDefault(); try { await request("/api/notifications", { title, message, audience }); setTitle(""); setMessage(""); await load(); } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to publish notification."); } }
+  return <section className="mt-6 rounded-2xl border border-primary-100 bg-white p-6 shadow-soft dark:border-slate-700 dark:bg-slate-800"><div className="flex items-center justify-between gap-3"><h2 className="text-2xl font-black">Notifications</h2><button type="button" onClick={() => void load()} className="rounded-lg border border-primary-200 px-3 py-2 text-sm font-black text-primary-700 dark:text-gold-400">Refresh</button></div>{role === "administrator" && <form onSubmit={publish} className="mt-5 grid gap-3 rounded-xl bg-primary-50 p-4 dark:bg-slate-900"><input required value={title} onChange={(event) => setTitle(event.target.value)} className="rounded-lg border p-3 text-slate-950" placeholder="Announcement title" /><textarea required value={message} onChange={(event) => setMessage(event.target.value)} className="min-h-20 rounded-lg border p-3 text-slate-950" placeholder="Message" /><select value={audience} onChange={(event) => setAudience(event.target.value)} className="rounded-lg border p-3 text-slate-950"><option value="all">Everyone</option><option value="student">Students</option><option value="school">Schools</option><option value="administrator">Administrators</option></select><button className="rounded-lg bg-primary-600 px-4 py-3 font-black text-white">Publish announcement</button></form>}{error && <p role="alert" className="mt-3 text-sm font-bold text-red-700">{error}</p>}<div className="mt-5 grid gap-3">{notices.length ? notices.map((notice) => <article key={notice.id} className="rounded-xl bg-primary-50 p-4 dark:bg-slate-900"><p className="font-black">{notice.title}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{notice.message}</p></article>) : <p className="text-sm text-slate-500">No notifications yet.</p>}</div></section>;
+}
