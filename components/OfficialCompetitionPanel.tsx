@@ -31,7 +31,14 @@ export function OfficialCompetitionPanel({ role }: OfficialCompetitionPanelProps
   const [notice, setNotice] = useState("");
   const { speak, isSpeaking } = useSpeechSynthesis();
 
-  async function start() { try { setNotice(""); const data = await api<{ questions: AssignedQuestion[] }>(`/api/competitions/${competitionId}/start`, {}); setQuestions(data.questions); } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to start."); } }
+  async function start() {
+    const id = competitionId.trim();
+    if (!id) {
+      setNotice("Enter the competition ID supplied by your school or administrator before starting.");
+      return;
+    }
+    try { setNotice(""); const data = await api<{ questions: AssignedQuestion[] }>(`/api/competitions/${encodeURIComponent(id)}/start`, {}); setQuestions(data.questions); } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to start."); }
+  }
   async function replay(questionId: number, sentence: string) { try { await api(`/api/competitions/${competitionId}/replay`, { questionId }); speak(sentence); } catch (error) { setNotice(error instanceof Error ? error.message : "Replay unavailable."); } }
   async function submit() { try { await api(`/api/competitions/${competitionId}/submit`, { responses: questions.map((question) => ({ questionId: question.id, response: responses[question.id] ?? "" })) }); setQuestions([]); setNotice("Official result submitted. Rankings update from the trusted server."); } catch (error) { setNotice(error instanceof Error ? error.message : "Submission failed."); } }
 
