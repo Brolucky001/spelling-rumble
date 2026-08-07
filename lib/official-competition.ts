@@ -11,6 +11,7 @@ export async function requireUser(request: Request, roles?: PortalRole[]) {
   if (!authorization?.startsWith("Bearer ")) throw new Error("Authentication is required.");
   const db = getAdminDb();
   const token = await getAdminAuth().verifyIdToken(authorization.slice(7));
+  if (!token.email_verified) throw new Error("Confirm your email address before accessing official competition services.");
   const profile = await db.doc(`users/${token.uid}`).get();
   const role = profile.data()?.role as PortalRole | undefined;
   if (!role || (roles && !roles.includes(role))) throw new Error("You do not have permission to perform this action.");
