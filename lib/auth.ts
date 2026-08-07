@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile, type User } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile, type User } from "firebase/auth";
 import { collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { PortalRole } from "@/types";
@@ -15,12 +15,6 @@ export async function signUp(displayName: string, email: string, password: strin
   if (role === "school") {
     await setDoc(doc(db, "schools", credential.user.uid), { name: displayName, ownerId: credential.user.uid, status: "pending", createdAt: serverTimestamp() });
   }
-  await sendEmailVerification(credential.user);
-}
-
-export async function resendEmailConfirmation() {
-  if (!auth.currentUser) throw new Error("Sign in to resend your confirmation email.");
-  await sendEmailVerification(auth.currentUser);
 }
 
 export async function requestPasswordReset(email: string) {
