@@ -8,13 +8,14 @@ import { ResultsScreen } from "@/components/ResultsScreen";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RoleDashboard } from "@/components/RoleDashboard";
 import { AuthPanel } from "@/components/AuthPanel";
+import { OfficialCompetitionPanel } from "@/components/OfficialCompetitionPanel";
 import { auth } from "@/lib/firebase";
 import { getPracticeResults, getUserProfile, savePracticeResult, signIn, signOutUser, signUp } from "@/lib/auth";
 import { pickSessionQuestions } from "@/utils/questions";
 import { getWordsPerMinute } from "@/utils/scoring";
 import type { AnswerRecord, Difficulty, PortalRole, Question, SessionResult } from "@/types";
 
-type Screen = "home" | "practice" | "results" | "dashboard" | "auth";
+type Screen = "home" | "practice" | "results" | "dashboard" | "auth" | "official";
 
 const storageKey = "spelling-rumble-results";
 
@@ -145,7 +146,7 @@ export function GameShell() {
         </header>
 
         <nav aria-label="Account workspace" className="mb-5 flex flex-wrap gap-2">
-          {user ? <><button type="button" onClick={() => setScreen("dashboard")} className="rounded-full bg-primary-50 px-4 py-2 text-sm font-black capitalize text-primary-700 dark:bg-slate-800 dark:text-gold-400">{role === "administrator" ? "Admin" : role} workspace</button><button type="button" onClick={() => void signOutUser()} className="rounded-full border border-primary-100 px-4 py-2 text-sm font-black text-primary-700 dark:border-slate-600 dark:text-gold-400">Sign out</button></> : <button type="button" onClick={() => setScreen("auth")} className="rounded-full bg-primary-600 px-4 py-2 text-sm font-black text-white">Sign in or create an account</button>}
+          {user ? <><button type="button" onClick={() => setScreen("dashboard")} className="rounded-full bg-primary-50 px-4 py-2 text-sm font-black capitalize text-primary-700 dark:bg-slate-800 dark:text-gold-400">{role === "administrator" ? "Admin" : role} workspace</button><button type="button" onClick={() => setScreen("official")} className="rounded-full bg-primary-600 px-4 py-2 text-sm font-black text-white">Official competition</button><button type="button" onClick={() => void signOutUser()} className="rounded-full border border-primary-100 px-4 py-2 text-sm font-black text-primary-700 dark:border-slate-600 dark:text-gold-400">Sign out</button></> : <button type="button" onClick={() => setScreen("auth")} className="rounded-full bg-primary-600 px-4 py-2 text-sm font-black text-white">Sign in or create an account</button>}
         </nav>
 
         {screen === "home" && (
@@ -177,6 +178,7 @@ export function GameShell() {
         )}
         {screen === "dashboard" && <RoleDashboard role={role} results={results} onPractice={() => setScreen("home")} />}
         {screen === "auth" && <AuthPanel onSignIn={async (email, password) => { await signIn(email, password); setScreen("dashboard"); }} onSignUp={async (name, email, password, accountRole) => { await signUp(name, email, password, accountRole); setScreen("dashboard"); }} />}
+        {screen === "official" && <OfficialCompetitionPanel role={role} />}
       </div>
     </main>
   );
