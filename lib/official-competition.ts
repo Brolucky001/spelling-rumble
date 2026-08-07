@@ -4,7 +4,7 @@ import questions from "@/data/questions.json";
 import { normalizeAnswer, pointsByDifficulty } from "@/utils/scoring";
 import type { Difficulty, PortalRole, Question } from "@/types";
 
-export interface CompetitionConfig { title: string; difficulty: Difficulty; startsAt: string; endsAt: string; questionIds: number[]; maxReplays: number; timeLimitSeconds: number; eligibleStudentIds?: string[]; eligibleSchoolIds?: string[]; }
+export interface CompetitionConfig { title: string; difficulty: Difficulty; startsAt: string; endsAt: string; questionIds: number[]; maxReplays: number; timeLimitSeconds: number; registrationFee?: number; eligibleStudentIds?: string[]; eligibleSchoolIds?: string[]; }
 
 export async function requireUser(request: Request, roles?: PortalRole[]) {
   const authorization = request.headers.get("authorization");
@@ -27,7 +27,7 @@ export function getQuestionSet(ids: number[]) {
 export function assertCompetitionConfig(value: unknown): CompetitionConfig {
   const config = value as CompetitionConfig;
   if (!config?.title?.trim() || !config.questionIds?.length || !pointsByDifficulty[config.difficulty] || !config.startsAt || !config.endsAt) throw new Error("Competition configuration is incomplete.");
-  if (new Date(config.startsAt) >= new Date(config.endsAt) || config.maxReplays < 0 || config.timeLimitSeconds < 10) throw new Error("Competition timing or replay settings are invalid.");
+  if (new Date(config.startsAt) >= new Date(config.endsAt) || config.maxReplays < 0 || config.timeLimitSeconds < 10 || (config.registrationFee ?? 0) < 0) throw new Error("Competition timing, fee, or replay settings are invalid.");
   getQuestionSet(config.questionIds);
   return config;
 }

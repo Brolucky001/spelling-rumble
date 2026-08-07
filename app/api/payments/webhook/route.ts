@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { markInvoicePaid, verifyFlutterwaveTransaction } from "@/lib/payments";
+export const runtime = "nodejs";
+export async function POST(request: Request) { try { if (request.headers.get("verif-hash") !== process.env.FLUTTERWAVE_WEBHOOK_HASH) throw new Error("Webhook signature is invalid."); const payload = await request.json(); const invoiceId = payload?.data?.tx_ref; const transactionId = payload?.data?.id; if (typeof invoiceId !== "string" || !transactionId) throw new Error("Webhook payload is invalid."); await verifyFlutterwaveTransaction(String(transactionId), invoiceId); await markInvoicePaid(invoiceId, String(transactionId)); return NextResponse.json({ ok: true }); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Webhook rejected." }, { status: 400 }); } }
