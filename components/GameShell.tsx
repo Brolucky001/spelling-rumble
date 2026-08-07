@@ -145,8 +145,13 @@ export function GameShell() {
           <div className="flex items-center gap-3"><span className="hidden rounded-full bg-gold-100 px-3 py-1.5 text-xs font-black text-[#527d18] sm:block">⚡ Daily streak: 3</span><ThemeToggle darkMode={darkMode} onToggle={() => setDarkMode((value) => !value)} /></div>
         </header>
 
-        <nav aria-label="Account workspace" className="mb-5 flex flex-wrap gap-2">
-          {user ? <><button type="button" onClick={() => setScreen("dashboard")} className="rounded-full bg-primary-50 px-4 py-2 text-sm font-black capitalize text-primary-700 dark:bg-slate-800 dark:text-gold-400">{role === "administrator" ? "Admin" : role} workspace</button><button type="button" onClick={() => setScreen("official")} className="rounded-full bg-primary-600 px-4 py-2 text-sm font-black text-white">Official competition</button><button type="button" onClick={() => void signOutUser()} className="rounded-full border border-primary-100 px-4 py-2 text-sm font-black text-primary-700 dark:border-slate-600 dark:text-gold-400">Sign out</button></> : <button type="button" onClick={() => setScreen("auth")} className="rounded-full bg-primary-600 px-4 py-2 text-sm font-black text-white">Sign in or create an account</button>}
+        <nav aria-label="Main menu" className="mb-6 rounded-2xl border border-primary-100 bg-white p-2 shadow-soft dark:border-slate-700 dark:bg-slate-800">
+          <div className="grid gap-2 sm:grid-cols-4">
+            <MenuButton active={screen === "home"} label="Home" description="Practice and progress" onClick={() => setScreen("home")} />
+            <MenuButton active={screen === "dashboard"} label="Dashboard" description={user ? `${role === "administrator" ? "Admin" : role} workspace` : "Sign in to view"} onClick={() => setScreen(user ? "dashboard" : "auth")} />
+            <MenuButton active={screen === "official"} label="Official competition" description={user ? "Trusted arena and rankings" : "Sign in to participate"} onClick={() => setScreen(user ? "official" : "auth")} />
+            {user ? <MenuButton label="Sign out" description={user.email ?? "Signed in"} onClick={() => void signOutUser()} /> : <MenuButton active={screen === "auth"} label="Sign in / Register" description="Student or school account" onClick={() => setScreen("auth")} />}
+          </div>
         </nav>
 
         {screen === "home" && (
@@ -182,4 +187,8 @@ export function GameShell() {
       </div>
     </main>
   );
+}
+
+function MenuButton({ active = false, label, description, onClick }: { active?: boolean; label: string; description: string; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={`rounded-xl px-4 py-3 text-left transition ${active ? "bg-primary-600 text-white shadow-sm" : "bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-slate-900 dark:text-gold-400 dark:hover:bg-slate-700"}`}><span className="block font-black">{label}</span><span className={`mt-1 block text-xs font-semibold ${active ? "text-white/75" : "text-slate-500 dark:text-slate-300"}`}>{description}</span></button>;
 }
