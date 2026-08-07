@@ -50,6 +50,8 @@ export function GameShell() {
     setDarkMode(savedTheme ? savedTheme === "dark" : prefersDark);
   }, []);
 
+  useEffect(() => { if ("serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js"); }, []);
+
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
     window.localStorage.setItem("spelling-rumble-theme", darkMode ? "dark" : "light");
@@ -135,7 +137,8 @@ export function GameShell() {
   }
 
   return (
-    <main className="min-h-screen text-slate-900 transition-colors dark:text-white">
+    <main id="app-content" className="min-h-screen text-slate-900 transition-colors dark:text-white">
+      <a href="#main-menu" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-primary-700">Skip to main menu</a>
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
         <header className="mb-6 flex items-center justify-between gap-4">
           <button type="button" onClick={() => setScreen("home")} className="flex items-center gap-3 text-left">
@@ -145,7 +148,7 @@ export function GameShell() {
           <div className="flex items-center gap-3"><span className="hidden rounded-full bg-gold-100 px-3 py-1.5 text-xs font-black text-[#527d18] sm:block">⚡ Daily streak: 3</span><ThemeToggle darkMode={darkMode} onToggle={() => setDarkMode((value) => !value)} /></div>
         </header>
 
-        <nav aria-label="Main menu" className="mb-6 rounded-2xl border border-primary-100 bg-white p-2 shadow-soft dark:border-slate-700 dark:bg-slate-800">
+        <nav id="main-menu" aria-label="Main menu" className="mb-6 rounded-2xl border border-primary-100 bg-white p-2 shadow-soft dark:border-slate-700 dark:bg-slate-800">
           <div className="grid gap-2 sm:grid-cols-4">
             <MenuButton active={screen === "home"} label="Home" description="Practice and progress" onClick={() => setScreen("home")} />
             <MenuButton active={screen === "dashboard"} label="Dashboard" description={user ? `${role === "administrator" ? "Admin" : role} workspace` : "Sign in to view"} onClick={() => setScreen(user ? "dashboard" : "auth")} />
