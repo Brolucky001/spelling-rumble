@@ -4,7 +4,7 @@ import questions from "@/data/questions.json";
 import { normalizeAnswer, pointsByDifficulty } from "@/utils/scoring";
 import type { Difficulty, PortalRole, Question } from "@/types";
 
-export interface CompetitionConfig { competitionId?: string; title: string; difficulty: Difficulty; startsAt: string; endsAt: string; questionIds: number[]; maxReplays: number; timeLimitSeconds: number; registrationFee?: number; eligibleStudentIds?: string[]; eligibleSchoolIds?: string[]; }
+export interface CompetitionConfig { competitionId?: string; title: string; difficulty: Difficulty; startsAt: string; endsAt: string; questionIds: number[]; maxReplays: number; timeLimitSeconds: number; proctoringEnabled?: boolean; registrationFee?: number; eligibleStudentIds?: string[]; eligibleSchoolIds?: string[]; }
 
 export async function requireUser(request: Request, roles?: PortalRole[]) {
   const authorization = request.headers.get("authorization");
@@ -52,12 +52,27 @@ export async function startOfficialAttempt(competitionId: string, uid: string, p
   if (existing.exists) {
     const data = existing.data()!;
     if (data.status !== "active") throw new Error("You have already submitted this competition.");
-    return { questions: getQuestionSet(data.questionIds).map(({ id, sentence }) => ({ id, sentence })), expiresAt: data.expiresAt.toDate().toISOString(), maxReplays: competition.maxReplays };
+    return { questions: getQuestionSet(data.questionIds).map(({ id, sentence }) => ({ id, sentence })), expiresAt: data.expiresAt.toDate().toISOString(), maxReplays: competition.maxReplays, proctoringEnabled: Boolean(competition.proctoringEnabled) };
   }
   const questionIds = competition.questionIds as number[];
   const expiresAt = Timestamp.fromMillis(Math.min(now + competition.timeLimitSeconds * 1000, new Date(competition.endsAt).getTime()));
   await attemptRef.create({ userId: uid, questionIds, replayCounts: {}, status: "active", startedAt: FieldValue.serverTimestamp(), expiresAt });
-  return { questions: getQuestionSet(questionIds).map(({ id, sentence }) => ({ id, sentence })), expiresAt: expiresAt.toDate().toISOString(), maxReplays: competition.maxReplays };
+  return { questions: getQuestionSet(questionIds).map(({ id, sentence }) => ({ id, sentence })), expiresAt: expiresAt.toDate().toISOString(), maxReplays: competition.maxReplays, proctoringEnabled: Boolean(competition.proctoringEnabled) };
+}
+
+const integrityEvents = ["camera_started", "camera_unavailable", "camera_stopped", "window_blur", "visibility_hidden", "fullscreen_exit"] as const;
+export type IntegrityEvent = typeof integrityEvents[number];
+
+export async function recordIntegrityEvent(competitionId: string, uid: string, event: IntegrityEvent) {
+  if (!integrityEvents.includes(event)) throw new Error("That integrity event is not supported.");
+  const db = getAdminDb();
+  const attemptRef = db.doc(`competitions/${competitionId}/attempts/${uid}`);
+  const attempt = await attemptRef.get();
+  if (!attempt.exists || attempt.data()?.status !== "active") throw new Error("No active competition attempt was found.");
+  await db.runTransaction(async (transaction) => {
+    transaction.create(attemptRef.collection("integrityEvents").doc(), { event, recordedAt: FieldValue.serverTimestamp() });
+    transaction.update(attemptRef, { integrityEventCount: FieldValue.increment(1), lastIntegrityEvent: event, lastIntegrityEventAt: FieldValue.serverTimestamp() });
+  });
 }
 
 export async function recordOfficialReplay(competitionId: string, uid: string, questionId: number) {

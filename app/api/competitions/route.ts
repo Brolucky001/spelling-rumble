@@ -16,12 +16,13 @@ export async function GET(request: Request) {
     const db = getAdminDb();
     const competitions = await db.collection("competitions").get();
     const items = await Promise.all(competitions.docs.map(async (competition) => {
-      const results = await competition.ref.collection("results").get();
+      const [results, attempts] = await Promise.all([competition.ref.collection("results").get(), competition.ref.collection("attempts").get()]);
       return {
         id: competition.id,
         ...competition.data(),
         createdAt: asIso(competition.data().createdAt),
-        results: results.docs.map((result) => ({ id: result.id, ...result.data(), submittedAt: asIso(result.data().submittedAt) }))
+        results: results.docs.map((result) => ({ id: result.id, ...result.data(), submittedAt: asIso(result.data().submittedAt) })),
+        integrityAttempts: attempts.docs.filter((attempt) => Number(attempt.data().integrityEventCount ?? 0) > 0).map((attempt) => ({ userId: attempt.id, status: attempt.data().status, integrityEventCount: Number(attempt.data().integrityEventCount ?? 0), lastIntegrityEvent: attempt.data().lastIntegrityEvent ?? null, lastIntegrityEventAt: asIso(attempt.data().lastIntegrityEventAt) }))
       };
     }));
     return NextResponse.json(items.sort((left, right) => String(right.createdAt ?? "").localeCompare(String(left.createdAt ?? ""))));
