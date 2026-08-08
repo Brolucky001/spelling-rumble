@@ -27,7 +27,10 @@ export function getQuestionSet(ids: number[]) {
 export function assertCompetitionConfig(value: unknown): CompetitionConfig {
   const config = value as CompetitionConfig;
   if (!config?.title?.trim() || !config.questionIds?.length || !pointsByDifficulty[config.difficulty] || !config.startsAt || !config.endsAt) throw new Error("Competition configuration is incomplete.");
-  if (new Date(config.startsAt) >= new Date(config.endsAt) || config.maxReplays < 0 || config.timeLimitSeconds < 10 || (config.registrationFee ?? 0) < 0) throw new Error("Competition timing, fee, or replay settings are invalid.");
+  if (Number.isNaN(new Date(config.startsAt).getTime()) || Number.isNaN(new Date(config.endsAt).getTime()) || new Date(config.startsAt) >= new Date(config.endsAt)) throw new Error("Competition end time must be after its start time.");
+  if (!Number.isInteger(config.maxReplays) || config.maxReplays < 0) throw new Error("Maximum replays must be a whole number of zero or more.");
+  if (!Number.isFinite(config.timeLimitSeconds) || config.timeLimitSeconds < 10) throw new Error("Official time limit must be at least 10 seconds.");
+  if (!Number.isFinite(config.registrationFee ?? 0) || (config.registrationFee ?? 0) < 0) throw new Error("Registration fee cannot be negative.");
   if (config.competitionId && !/^[A-Za-z0-9_-]{3,64}$/.test(config.competitionId)) throw new Error("Custom competition ID must be 3–64 letters, numbers, hyphens, or underscores.");
   getQuestionSet(config.questionIds);
   return config;
