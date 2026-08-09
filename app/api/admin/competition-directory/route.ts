@@ -17,13 +17,14 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const kind = params.get("kind") as DirectoryKind;
     if (kind !== "schools" && kind !== "students") throw new Error("Choose schools or students.");
-    const search = (params.get("search") ?? "").trim().toLowerCase();
+    const rawSearch = (params.get("search") ?? "").trim();
+    const search = rawSearch.toLowerCase();
     const cursor = decodeCursor(params.get("cursor"));
     const db = getAdminDb();
     const collection = kind === "schools" ? db.collection("schools") : db.collection("users");
 
     if (search && !search.includes("@")) {
-      const direct = await collection.doc(search).get();
+      const direct = await collection.doc(rawSearch).get();
       if (direct.exists && (kind === "schools" || direct.data()?.role === "student")) return NextResponse.json({ items: [toItem(kind, direct.id, direct.data()!)], nextCursor: null });
     }
 
