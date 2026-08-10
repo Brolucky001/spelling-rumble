@@ -6,6 +6,11 @@ import type { SessionResult } from "@/types";
 
 export interface UserProfile { displayName: string; email: string; role: PortalRole; }
 
+function publicId(role: Extract<PortalRole, "student" | "teacher" | "school">, uid: string) {
+  const prefix = role === "school" ? "SCH" : role === "teacher" ? "TCH" : "STU";
+  return `${prefix}-${uid.slice(0, 8).toUpperCase()}`;
+}
+
 export async function signIn(email: string, password: string) {
   const credential = await signInWithEmailAndPassword(auth, email, password);
   await ensureSchoolRecord(credential.user);
@@ -15,9 +20,10 @@ export async function signUp(displayName: string, email: string, password: strin
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, { displayName });
   const batch = writeBatch(db);
-  batch.set(doc(db, "users", credential.user.uid), { displayName, email: credential.user.email, searchName: displayName.trim().toLowerCase(), searchEmail: credential.user.email?.toLowerCase() ?? "", role, createdAt: serverTimestamp() });
+  const id = publicId(role, credential.user.uid);
+  batch.set(doc(db, "users", credential.user.uid), { displayName, email: credential.user.email, publicId: id, searchName: displayName.trim().toLowerCase(), searchEmail: credential.user.email?.toLowerCase() ?? "", role, createdAt: serverTimestamp() });
   if (role === "school") {
-    batch.set(doc(db, "schools", credential.user.uid), { name: displayName, searchName: displayName.trim().toLowerCase(), ownerId: credential.user.uid, status: "pending", createdAt: serverTimestamp() });
+    batch.set(doc(db, "schools", credential.user.uid), { name: displayName, publicId: id, searchName: displayName.trim().toLowerCase(), ownerId: credential.user.uid, status: "pending", createdAt: serverTimestamp() });
   }
   await batch.commit();
 }
@@ -28,7 +34,7 @@ async function ensureSchoolRecord(user: User) {
   const schoolRef = doc(db, "schools", user.uid);
   if ((await getDoc(schoolRef)).exists()) return;
   const name = profile.data()?.displayName ?? user.displayName ?? "School";
-  await setDoc(schoolRef, { name, searchName: name.trim().toLowerCase(), ownerId: user.uid, status: "pending", createdAt: serverTimestamp() });
+  await setDoc(schoolRef, { name, publicId: profile.data()?.publicId ?? publicId("school", user.uid), searchName: name.trim().toLowerCase(), ownerId: user.uid, status: "pending", createdAt: serverTimestamp() });
 }
 
 export async function requestPasswordReset(email: string) {

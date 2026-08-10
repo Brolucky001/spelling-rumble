@@ -13,8 +13,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "role", "order": "ASCENDING" },
-        { "fieldPath": "email", "order": "ASCENDING" },
-        { "fieldPath": "searchName", "order": "ASCENDING" }
+        { "fieldPath": "searchEmail", "order": "ASCENDING" }
       ]
     },
     {
