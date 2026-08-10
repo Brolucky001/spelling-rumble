@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     let query: Query = collection;
     if (kind === "students") query = query.where("role", "==", "student");
     if (kind === "students" && params.get("schoolId")) query = query.where("schoolId", "==", params.get("schoolId"));
-    if (search.includes("@") && kind === "students") query = query.where("searchEmail", "==", search);
+    if (search.includes("@") && kind === "students") query = query.where("email", "==", search);
     else if (search) query = query.where("searchName", ">=", search).where("searchName", "<", `${search}\uf8ff`);
     query = query.orderBy("searchName").orderBy(FieldPath.documentId());
     if (cursor) query = query.startAfter(cursor.name, cursor.id);
