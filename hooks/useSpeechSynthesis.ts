@@ -16,7 +16,7 @@ export function useSpeechSynthesis() {
   }, []);
 
   const speak = useCallback(
-    (sentence: string) => {
+    (sentence: string, onComplete?: () => void) => {
       if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
         return;
       }
@@ -27,8 +27,9 @@ export function useSpeechSynthesis() {
         const utterance = new SpeechSynthesisUtterance(sentence);
         utterance.rate = 0.9;
         utterance.pitch = 1;
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
+        const complete = () => { setIsSpeaking(false); onComplete?.(); };
+        utterance.onend = complete;
+        utterance.onerror = complete;
         window.speechSynthesis.speak(utterance);
       }, 500);
     },

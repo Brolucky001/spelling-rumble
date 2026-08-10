@@ -86,7 +86,7 @@ export async function recordOfficialReplay(competitionId: string, uid: string, q
   const db = getAdminDb();
   const competitionRef = db.doc(`competitions/${competitionId}`);
   const attemptRef = competitionRef.collection("attempts").doc(uid);
-  await db.runTransaction(async (transaction) => {
+  return db.runTransaction(async (transaction) => {
     const [competitionSnapshot, attemptSnapshot] = await Promise.all([transaction.get(competitionRef), transaction.get(attemptRef)]);
     const competition = competitionSnapshot.data(); const attempt = attemptSnapshot.data();
     if (!competition || !attempt || attempt.status !== "active" || Date.now() > attempt.expiresAt.toMillis()) throw new Error("This attempt is no longer active.");
@@ -94,6 +94,7 @@ export async function recordOfficialReplay(competitionId: string, uid: string, q
     const count = Number(attempt.replayCounts?.[questionId] ?? 0);
     if (count >= competition.maxReplays) throw new Error("Replay limit reached.");
     transaction.update(attemptRef, { [`replayCounts.${questionId}`]: count + 1 });
+    return { replayCount: count + 1, replaysRemaining: competition.maxReplays - count - 1 };
   });
 }
 
@@ -105,7 +106,11 @@ export async function submitOfficialAttempt(competitionId: string, uid: string, 
   await db.runTransaction(async (transaction) => {
     const [competitionSnapshot, attemptSnapshot, userSnapshot] = await Promise.all([transaction.get(competitionRef), transaction.get(attemptRef), transaction.get(db.doc(`users/${uid}`))]);
     const competition = competitionSnapshot.data(); const attempt = attemptSnapshot.data(); const profile = userSnapshot.data();
-    if (!competition || !attempt || !profile || attempt.status !== "active" || Date.now() > attempt.expiresAt.toMillis()) throw new Error("This attempt cannot be submitted.");
+    if (!competition) throw new Error("This competition was not found.");
+    if (!attempt) throw new Error("No active attempt was found. Start the competition again using its ID.");
+    if (!profile) throw new Error("Your student profile was not found.");
+    if (attempt.status !== "active") throw new Error("This competition attempt has already been submitted.");
+    if (Date.now() > attempt.expiresAt.toMillis()) throw new Error("This competition attempt has expired and can no longer be submitted.");
     const assigned = attempt.questionIds as number[];
     if (responses.length !== assigned.length || responses.some((item) => !assigned.includes(item.questionId))) throw new Error("Submitted answers do not match the assigned questions.");
     const answerById = new Map(responses.map((item) => [item.questionId, item.response]));

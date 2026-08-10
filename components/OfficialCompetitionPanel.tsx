@@ -32,7 +32,10 @@ export function OfficialCompetitionPanel({ role }: OfficialCompetitionPanelProps
   const [proctoringEnabled, setProctoringEnabled] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
   const [notice, setNotice] = useState("");
-  const { speak, isSpeaking } = useSpeechSynthesis();
+  const { speak } = useSpeechSynthesis();
+  const [playingQuestionId, setPlayingQuestionId] = useState<number | null>(null);
+  const [replayCounts, setReplayCounts] = useState<Record<number, number>>({});
+  const [maxReplays, setMaxReplays] = useState(0);
 
   async function start() {
     const id = competitionId.trim();
@@ -40,10 +43,28 @@ export function OfficialCompetitionPanel({ role }: OfficialCompetitionPanelProps
       setNotice("Enter the competition ID supplied by your school or administrator before starting.");
       return;
     }
-    try { setNotice(""); const data = await api<{ questions: AssignedQuestion[]; expiresAt: string; proctoringEnabled: boolean }>(`/api/competitions/${encodeURIComponent(id)}/start`, {}); setQuestions(data.questions); setExpiresAt(data.expiresAt); setProctoringEnabled(data.proctoringEnabled); } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to start."); }
+    try {
+      setNotice("");
+      const data = await api<{ questions: AssignedQuestion[]; expiresAt: string; proctoringEnabled: boolean; maxReplays: number }>("/api/competitions/" + encodeURIComponent(id) + "/start", {});
+      setCompetitionId(id); setQuestions(data.questions); setExpiresAt(data.expiresAt); setProctoringEnabled(data.proctoringEnabled); setMaxReplays(data.maxReplays); setReplayCounts({});
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to start."); }
   }
-  async function replay(questionId: number, sentence: string) { try { await api(`/api/competitions/${competitionId}/replay`, { questionId }); speak(sentence); } catch (error) { setNotice(error instanceof Error ? error.message : "Replay unavailable."); } }
-  async function submit() { try { await api(`/api/competitions/${competitionId}/submit`, { responses: questions.map((question) => ({ questionId: question.id, response: responses[question.id] ?? "" })) }); setQuestions([]); setExpiresAt(null); setNotice("Official result submitted. Rankings update from the trusted server."); } catch (error) { setNotice(error instanceof Error ? error.message : "Submission failed."); } }
+  async function replay(questionId: number, sentence: string) {
+    const id = competitionId.trim();
+    try {
+      const data = await api<{ replayCount: number }>("/api/competitions/" + encodeURIComponent(id) + "/replay", { questionId });
+      setReplayCounts((current) => ({ ...current, [questionId]: data.replayCount }));
+      setPlayingQuestionId(questionId);
+      speak(sentence, () => setPlayingQuestionId(null));
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Replay unavailable."); }
+  }
+  async function submit() {
+    const id = competitionId.trim();
+    try {
+      await api("/api/competitions/" + encodeURIComponent(id) + "/submit", { responses: questions.map((question) => ({ questionId: question.id, response: responses[question.id] ?? "" })) });
+      setQuestions([]); setExpiresAt(null); setPlayingQuestionId(null); setNotice("Official result submitted. Rankings update from the trusted server.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Submission failed."); }
+  }
 
   useEffect(() => {
     if (!expiresAt) return;
@@ -53,8 +74,14 @@ export function OfficialCompetitionPanel({ role }: OfficialCompetitionPanelProps
   }, [expiresAt]);
 
   if (role === "administrator") return <AdminCompetitionForm onCreated={(id) => { setCompetitionId(id); setNotice(`Competition created: ${id}`); }} notice={notice} />;
-  return <section className="mx-auto w-full max-w-3xl rounded-[1.75rem] border border-primary-100 bg-white p-6 shadow-soft dark:border-slate-700 dark:bg-slate-800"><p className="text-sm font-black tracking-widest text-primary-600">OFFICIAL COMPETITION</p><h1 className="mt-1 text-3xl font-black text-slate-950 dark:text-white">Trusted competition arena</h1><label className="mt-6 grid gap-2 font-bold">Competition ID<input value={competitionId} onChange={(event) => setCompetitionId(event.target.value)} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-slate-950 dark:bg-slate-900 dark:text-white" /></label>{!questions.length && <button type="button" onClick={() => void start()} className="mt-4 rounded-lg bg-primary-600 px-5 py-3 font-black text-white">Start official attempt</button>}{questions.length > 0 && <><p className="mt-4 rounded-lg bg-red-50 p-3 font-black text-red-800">Official timer: {Math.floor(secondsRemaining / 60)}:{String(secondsRemaining % 60).padStart(2, "0")} remaining</p>{proctoringEnabled && <IntegrityMonitor competitionId={competitionId} />}</>}{questions.map((question, index) => <div key={question.id} className="mt-5 rounded-xl bg-primary-50 p-4 dark:bg-slate-900"><p className="font-black">Question {index + 1}</p><button type="button" disabled={isSpeaking} onClick={() => void replay(question.id, question.sentence)} className="mt-3 rounded-lg border border-primary-200 px-4 py-2 font-black text-primary-700 dark:text-gold-400">{isSpeaking ? "Playing..." : "Play sentence"}</button><textarea value={responses[question.id] ?? ""} onChange={(event) => setResponses({ ...responses, [question.id]: event.target.value })} className="mt-3 min-h-24 w-full rounded-lg border border-slate-200 bg-white p-3 text-slate-950 dark:bg-slate-800 dark:text-white" placeholder="Type exactly what you hear" /></div>)}{questions.length > 0 && <button type="button" disabled={!secondsRemaining} onClick={() => void submit()} className="mt-5 rounded-lg bg-gold-500 px-5 py-3 font-black text-primary-700 disabled:bg-slate-300">Submit official answers</button>}<Rankings competitionId={competitionId} />{notice && <p role="status" className="mt-4 rounded-lg bg-primary-50 p-3 font-bold text-primary-700 dark:bg-slate-900 dark:text-gold-400">{notice}</p>}</section>;
+  return <section className="mx-auto w-full max-w-3xl rounded-[1.75rem] border border-primary-100 bg-white p-6 shadow-soft dark:border-slate-700 dark:bg-slate-800"><p className="text-sm font-black tracking-widest text-primary-600">OFFICIAL COMPETITION</p><h1 className="mt-1 text-3xl font-black text-slate-950 dark:text-white">Trusted competition arena</h1><label className="mt-6 grid gap-2 font-bold">Competition ID<input value={competitionId} disabled={questions.length > 0} onChange={(event) => setCompetitionId(event.target.value)} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-slate-950 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-slate-900 dark:text-white" /></label>{!questions.length && <button type="button" onClick={() => void start()} className="mt-4 rounded-lg bg-primary-600 px-5 py-3 font-black text-white">Start official attempt</button>}{questions.length > 0 && <><p className="mt-4 rounded-lg bg-red-50 p-3 font-black text-red-800">Official timer: {Math.floor(secondsRemaining / 60)}:{String(secondsRemaining % 60).padStart(2, "0")} remaining</p>{proctoringEnabled && <IntegrityMonitor competitionId={competitionId} />}</>}{questions.map((question, index) => <OfficialQuestionCard key={question.id} question={question} index={index} response={responses[question.id] ?? ""} playing={playingQuestionId === question.id} replayCount={replayCounts[question.id] ?? 0} maxReplays={maxReplays} onReplay={() => void replay(question.id, question.sentence)} onResponse={(value) => setResponses({ ...responses, [question.id]: value })} />)}{questions.length > 0 && <button type="button" disabled={!secondsRemaining} onClick={() => void submit()} className="mt-5 rounded-lg bg-gold-500 px-5 py-3 font-black text-primary-700 disabled:bg-slate-300">Submit official answers</button>}<Rankings competitionId={competitionId} />{notice && <p role="status" className="mt-4 rounded-lg bg-primary-50 p-3 font-bold text-primary-700 dark:bg-slate-900 dark:text-gold-400">{notice}</p>}</section>;
 }
+
+function OfficialQuestionCard({ question, index, response, playing, replayCount, maxReplays, onReplay, onResponse }: { question: AssignedQuestion; index: number; response: string; playing: boolean; replayCount: number; maxReplays: number; onReplay: () => void; onResponse: (value: string) => void }) {
+  const noReplaysLeft = replayCount >= maxReplays;
+  return <div className="mt-5 rounded-xl bg-primary-50 p-4 dark:bg-slate-900"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-black">Question {index + 1}</p><p className="text-xs font-bold text-slate-500">Replay {replayCount} of {maxReplays}</p></div><button type="button" disabled={playing || noReplaysLeft} onClick={onReplay} className="mt-3 rounded-lg border border-primary-200 px-4 py-2 font-black text-primary-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-gold-400">{playing ? "Playing..." : noReplaysLeft ? "No replays left" : "Play sentence"}</button><textarea value={response} onChange={(event) => onResponse(event.target.value)} className="mt-3 min-h-24 w-full rounded-lg border border-slate-200 bg-white p-3 text-slate-950 dark:bg-slate-800 dark:text-white" placeholder="Type exactly what you hear" /></div>;
+}
+
 
 function IntegrityMonitor({ competitionId }: { competitionId: string }) {
   const video = useRef<HTMLVideoElement>(null); const stream = useRef<MediaStream | null>(null); const fullscreenSeen = useRef(false); const [status, setStatus] = useState("Requesting camera accessâ€¦");
