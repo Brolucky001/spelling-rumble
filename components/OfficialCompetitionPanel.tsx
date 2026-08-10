@@ -96,24 +96,29 @@ function AssignmentList({ title, description, rows, selected, onToggle }: { titl
 
 function PagedAssignmentList({ title, description, rows: _rows, selected, onToggle }: { title: string; description: string; rows: { id: string; label: string; detail: string }[]; selected: string[]; onToggle: (id: string) => void }) {
   const kind = title.toLowerCase().includes("school") ? "schools" : "students";
-  const [search, setSearch] = useState(""); const [items, setItems] = useState<{ id: string; label: string; detail: string }[]>([]); const [cursor, setCursor] = useState<string | null>(null); const [loading, setLoading] = useState(false); const [error, setError] = useState("");
+  const [search, setSearch] = useState(""); const [items, setItems] = useState<{ id: string; label: string; detail: string }[]>([]); const [cursor, setCursor] = useState<string | null>(null); const [loading, setLoading] = useState(false); const [error, setError] = useState(""); const [selectedItems, setSelectedItems] = useState<Record<string, { id: string; label: string; detail: string }>>({});
+  const query = search.trim(); const canSearch = query.length >= 3 || /^(STU|SCH|TCH|ADM)-/i.test(query);
   async function loadPage(reset: boolean) {
+    if (!canSearch) return;
     setLoading(true); setError("");
     try {
-      const params = new URLSearchParams({ kind, ...(search.trim() ? { search: search.trim() } : {}), ...(!reset && cursor ? { cursor } : {}) });
-      const data = await api<{ items: { id: string; label: string; detail: string }[]; nextCursor: string | null }>(`/api/admin/competition-directory?${params}`);
+      const params = new URLSearchParams({ kind, search: query, ...(!reset && cursor ? { cursor } : {}) });
+      const data = await api<{ items: { id: string; label: string; detail: string }[]; nextCursor: string | null }>("/api/admin/competition-directory?" + params);
       setItems((current) => reset ? data.items : [...current, ...data.items]); setCursor(data.nextCursor);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to search the directory."); } finally { setLoading(false); }
   }
   useEffect(() => {
+    if (!canSearch) { setItems([]); setCursor(null); setError(""); setLoading(false); return; }
     const timer = window.setTimeout(() => {
-      const params = new URLSearchParams({ kind, ...(search.trim() ? { search: search.trim() } : {}) });
+      const params = new URLSearchParams({ kind, search: query });
       setLoading(true); setError("");
-      void api<{ items: { id: string; label: string; detail: string }[]; nextCursor: string | null }>(`/api/admin/competition-directory?${params}`).then((data) => { setItems(data.items); setCursor(data.nextCursor); }).catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to search the directory.")).finally(() => setLoading(false));
+      void api<{ items: { id: string; label: string; detail: string }[]; nextCursor: string | null }>("/api/admin/competition-directory?" + params).then((data) => { setItems(data.items); setCursor(data.nextCursor); }).catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to search the directory.")).finally(() => setLoading(false));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [kind, search]);
-  return <fieldset className="rounded-xl border border-primary-100 p-4"><legend className="px-1 font-black">{title}</legend><p className="text-sm text-slate-500">{description}</p><input value={search} onChange={(event) => setSearch(event.target.value)} className="mt-3 w-full rounded-lg border p-3 text-slate-950" placeholder={kind === "schools" ? "Search school name or ID" : "Search student name, email, or user ID"} /><div className="mt-3 grid max-h-64 gap-2 overflow-y-auto">{items.map((row) => <label key={row.id} className="flex gap-3 rounded-lg bg-primary-50 p-3 text-sm dark:bg-slate-900"><input type="checkbox" checked={selected.includes(row.id)} onChange={() => onToggle(row.id)} /><span><strong>{row.label}</strong><span className="block break-all text-xs text-slate-500">{row.detail}</span></span></label>)}{!loading && !items.length && <p className="text-sm text-slate-500">No matching records.</p>}</div>{cursor && <button type="button" disabled={loading} onClick={() => void loadPage(false)} className="mt-3 rounded border border-primary-200 px-3 py-2 text-sm font-black text-primary-700">Load more</button>}{loading && <p className="mt-2 text-sm text-slate-500">Loading…</p>}{error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}<p className="mt-3 text-xs font-bold text-slate-500">{selected.length} selected</p></fieldset>;
+  }, [canSearch, kind, query]);
+  function add(row: { id: string; label: string; detail: string }) { if (!selected.includes(row.id)) onToggle(row.id); setSelectedItems((current) => ({ ...current, [row.id]: row })); setSearch(""); }
+  function remove(id: string) { if (selected.includes(id)) onToggle(id); setSelectedItems((current) => { const next = { ...current }; delete next[id]; return next; }); }
+  return <fieldset className="rounded-xl border border-primary-100 p-4"><legend className="px-1 font-black">{title}</legend><p className="text-sm text-slate-500">{description}</p><input value={search} onChange={(event) => setSearch(event.target.value)} className="mt-3 w-full rounded-lg border p-3 text-slate-950" placeholder={kind === "schools" ? "Type the first 3 letters of a school name" : "Type the first 3 letters of a student name or email"} /><p className="mt-2 text-xs text-slate-500">Search begins after 3 letters. You can also enter a public ID.</p>{Object.values(selectedItems).length > 0 && <div className="mt-3 flex flex-wrap gap-2">{Object.values(selectedItems).map((row) => <span key={row.id} className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-3 py-1 text-xs font-bold text-primary-800"><span>{row.label}</span><button type="button" onClick={() => remove(row.id)} aria-label={"Remove " + row.label} className="rounded-full px-1 text-primary-800 hover:bg-primary-200">&times;</button></span>)}</div>}<div className="mt-3 grid max-h-64 gap-2 overflow-y-auto">{canSearch && items.map((row) => <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg bg-primary-50 p-3 text-sm dark:bg-slate-900"><span><strong>{row.label}</strong><span className="block break-all text-xs text-slate-500">{row.detail}</span></span><button type="button" disabled={selected.includes(row.id)} onClick={() => add(row)} className="shrink-0 rounded border border-primary-300 px-3 py-1.5 text-xs font-black text-primary-700 disabled:cursor-not-allowed disabled:opacity-60">{selected.includes(row.id) ? "Added" : "Add"}</button></div>)}{!canSearch && <p className="text-sm text-slate-500">Type at least 3 letters to find matching records.</p>}{canSearch && !loading && !items.length && <p className="text-sm text-slate-500">No matching records.</p>}</div>{cursor && <button type="button" disabled={loading} onClick={() => void loadPage(false)} className="mt-3 rounded border border-primary-200 px-3 py-2 text-sm font-black text-primary-700">Load more</button>}{loading && <p className="mt-2 text-sm text-slate-500">Loading...</p>}{error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}<p className="mt-3 text-xs font-bold text-slate-500">{selected.length} selected</p></fieldset>;
 }
 
 function Rankings({ competitionId }: { competitionId: string }) {
@@ -122,6 +127,3 @@ function Rankings({ competitionId }: { competitionId: string }) {
   return <div className="mt-7 border-t border-primary-100 pt-5"><button type="button" disabled={!competitionId} onClick={() => void load()} className="rounded-lg border border-primary-200 px-4 py-2 font-black text-primary-700 dark:text-gold-400">Load trusted rankings</button>{error && <p className="mt-2 text-sm text-red-700">{error}</p>}{data && <div className="mt-4 grid gap-4 sm:grid-cols-2"><RankingList title="Students" rows={data.students.map((row) => `#${row.rank} ${row.studentName} â€” ${row.score} XP`)} /><RankingList title="Schools" rows={data.schools.map((row) => `#${row.rank} ${row.name} â€” ${row.totalScore} XP`)} /></div>}</div>;
 }
 function RankingList({ title, rows }: { title: string; rows: string[] }) { return <div><h2 className="font-black">{title}</h2>{rows.length ? <ol className="mt-2 grid gap-1 text-sm">{rows.map((row) => <li key={row}>{row}</li>)}</ol> : <p className="mt-2 text-sm text-slate-500">No final results yet.</p>}</div>; }
-
-
-
