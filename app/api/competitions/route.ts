@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const { competitionId, ...config } = assertCompetitionConfig(await request.json());
     const db = getAdminDb();
     const competition = competitionId ? db.collection("competitions").doc(competitionId) : db.collection("competitions").doc();
-    await competition.create({ ...config, status: "scheduled", createdAt: FieldValue.serverTimestamp() });
+    await competition.create({ ...config, accessMode: "open", status: "scheduled", createdAt: FieldValue.serverTimestamp() });
     await recordAudit(user.uid, "competition.created", competition.id, { title: config.title });
     return NextResponse.json({ id: competition.id }, { status: 201 });
   } catch (error) {

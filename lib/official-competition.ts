@@ -37,6 +37,10 @@ export function assertCompetitionConfig(value: unknown): CompetitionConfig {
 }
 
 function isEligible(competition: DocumentData, uid: string, schoolId?: string) {
+  // Official competitions are open by default: a signed-in student who knows the
+  // active competition ID may start. Restricted access remains available for
+  // competitions explicitly configured by trusted server code.
+  if (competition.accessMode !== "restricted") return true;
   const students = competition.eligibleStudentIds as string[] | undefined;
   const schools = competition.eligibleSchoolIds as string[] | undefined;
   return students?.includes(uid) || (schoolId && schools?.includes(schoolId));
