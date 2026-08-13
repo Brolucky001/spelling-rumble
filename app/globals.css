@@ -30,6 +30,17 @@ body {
   color: #f8fafc;
 }
 
+/* Keep destructive/error actions red, but make the app's burgundy primary
+   action buttons lemon in dark mode for clearer contrast. */
+.dark button.bg-primary-600:not(:disabled) {
+  background-color: #A4D65E !important;
+  color: #500a28 !important;
+}
+
+.dark button.bg-primary-600:not(:disabled):hover {
+  background-color: #b8e276 !important;
+}
+
 .page-orb { position: absolute; border-radius: 9999px; filter: blur(2px); pointer-events: none; }
 .floaty { animation: floaty 6s ease-in-out infinite; }
 @keyframes floaty { 50% { transform: translateY(-10px) rotate(2deg); } }
