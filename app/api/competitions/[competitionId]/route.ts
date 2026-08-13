@@ -31,8 +31,14 @@ export async function PATCH(request: Request, { params }: { params: { competitio
 export async function DELETE(request: Request, { params }: { params: { competitionId: string } }) {
   try {
     const user = await requireUser(request, ["administrator"]);
-    const reference = await editableCompetition(params.competitionId);
-    await reference.delete();
+    const db = getAdminDb();
+    const reference = db.doc(`competitions/${params.competitionId}`);
+    const competition = await reference.get();
+    if (!competition.exists) throw new Error("Competition was not found.");
+    const endsAt = new Date(competition.data()?.endsAt ?? 0).getTime();
+    if (competition.data()?.status === "active" && (!Number.isFinite(endsAt) || Date.now() <= endsAt)) throw new Error("An active competition cannot be deleted until it has ended.");
+    await db.recursiveDelete(reference);
+    await db.doc(`leaderboards/${params.competitionId}`).delete();
     await recordAudit(user.uid, "competition.deleted", params.competitionId);
     return NextResponse.json({ ok: true });
   } catch (error) {
