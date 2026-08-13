@@ -25,7 +25,15 @@ export function useSpeechSynthesis() {
       setIsSpeaking(true);
       timeoutRef.current = window.setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(sentence);
-        utterance.rate = 0.9;
+        // Prefer Nigerian English where the device supplies it. Browsers expose
+        // different voice lists, so English remains a graceful fallback.
+        const voices = window.speechSynthesis.getVoices();
+        const voice = voices.find((item) => item.lang.toLowerCase() === "en-ng")
+          ?? voices.find((item) => item.lang.toLowerCase().startsWith("en-ng"))
+          ?? voices.find((item) => item.lang.toLowerCase().startsWith("en-"));
+        if (voice) utterance.voice = voice;
+        utterance.lang = voice?.lang ?? "en-NG";
+        utterance.rate = 0.8;
         utterance.pitch = 1;
         const complete = () => { setIsSpeaking(false); onComplete?.(); };
         utterance.onend = complete;
