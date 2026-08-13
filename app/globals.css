@@ -41,6 +41,20 @@ body {
   background-color: #b8e276 !important;
 }
 
+/* The panel headed “Competition Administration” uses lemon throughout dark mode. */
+.dark section:has(> div > div > p.text-primary-600) .text-primary-600,
+.dark section:has(> div > div > p.text-primary-600) .text-primary-700,
+.dark section:has(> div > div > p.text-primary-600) .text-primary-800,
+.dark section:has(> div > div > p.text-primary-600) .dark\:text-white {
+  color: #b8e276 !important;
+}
+
+.dark section:has(> div > div > p.text-primary-600) .border-primary-100,
+.dark section:has(> div > div > p.text-primary-600) .border-primary-200,
+.dark section:has(> div > div > p.text-primary-600) .border-primary-300 {
+  border-color: #a4d65e !important;
+}
+
 .page-orb { position: absolute; border-radius: 9999px; filter: blur(2px); pointer-events: none; }
 .floaty { animation: floaty 6s ease-in-out infinite; }
 @keyframes floaty { 50% { transform: translateY(-10px) rotate(2deg); } }
