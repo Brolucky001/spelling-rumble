@@ -20,7 +20,7 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [questionElapsedSeconds, setQuestionElapsedSeconds] = useState(0);
   const [score, setScore] = useState(0);
-  const { isSpeaking, speak } = useSpeechSynthesis();
+  const { isSpeaking, isPaused, speak, pause, resume } = useSpeechSynthesis();
 
   const question = questions[currentIndex];
   const timeLimit = timeLimitByDifficulty[difficulty];
@@ -119,6 +119,7 @@ export function PracticeScreen({ difficulty, questions, onFinish }: PracticeScre
           >
             {isSpeaking ? "Playing..." : "▶ Play sentence"}
           </button>
+          {isSpeaking && <button type="button" onClick={isPaused ? resume : pause} className="min-h-14 rounded-xl border border-primary-200 bg-white px-5 py-3 text-lg font-black text-primary-700 transition hover:bg-primary-50 dark:bg-slate-900 dark:text-gold-400">{isPaused ? "Resume audio" : "Pause audio"}</button>}
           <span className="text-base font-bold text-slate-600 dark:text-slate-300">
             Replays used: {Math.max(0, plays - 1)} / 2
           </span>
