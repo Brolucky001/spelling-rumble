@@ -18,7 +18,17 @@ async function editableCompetition(competitionId: string) {
 export async function PATCH(request: Request, { params }: { params: { competitionId: string } }) {
   try {
     const user = await requireUser(request, ["administrator"]);
-    const { competitionId: _ignored, ...config } = assertCompetitionConfig(await request.json());
+    const body = await request.json() as Record<string, unknown>;
+    const db = getAdminDb();
+    const existing = await db.doc(`competitions/${params.competitionId}`).get();
+    if (!existing.exists) throw new Error("Competition was not found.");
+    if (existing.data()?.status !== "scheduled") {
+      if (typeof body.title !== "string" || !body.title.trim()) throw new Error("Only the title of a past competition can be edited.");
+      await existing.ref.update({ title: body.title.trim(), updatedAt: new Date().toISOString() });
+      await recordAudit(user.uid, "competition.title_updated", params.competitionId, { title: body.title.trim() });
+      return NextResponse.json({ ok: true });
+    }
+    const { competitionId: _ignored, ...config } = assertCompetitionConfig(body);
     const reference = await editableCompetition(params.competitionId);
     await reference.update({ ...config, updatedAt: new Date().toISOString() });
     await recordAudit(user.uid, "competition.updated", params.competitionId, { title: config.title });
