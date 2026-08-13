@@ -1,6 +1,6 @@
 import { Leaderboard } from "@/components/Leaderboard";
 import { ScoreCircle } from "@/components/ScoreCircle";
-import { formatTime, getPerformanceMessage } from "@/utils/scoring";
+import { formatTime, getPerformanceMessage, pointsByDifficulty } from "@/utils/scoring";
 import type { SessionResult } from "@/types";
 
 interface ResultsScreenProps {
@@ -11,6 +11,7 @@ interface ResultsScreenProps {
 }
 
 export function ResultsScreen({ result, leaderboard, onRestart, onHome }: ResultsScreenProps) {
+  const maximumScore = result.totalQuestions * pointsByDifficulty[result.difficulty];
   return (
     <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
       <section className="animate-fade-in rounded-lg border border-primary-100 bg-white p-5 shadow-soft dark:border-slate-700 dark:bg-slate-800 sm:p-8">
@@ -33,7 +34,7 @@ export function ResultsScreen({ result, leaderboard, onRestart, onHome }: Result
           <ResultStat label="Correct" value={result.correctAnswers.toString()} />
           <ResultStat label="Incorrect" value={result.incorrectAnswers.toString()} />
           <ResultStat label="Accuracy" value={`${result.accuracy}%`} />
-          <ResultStat label="XP earned" value={result.xp.toString()} />
+          <ResultStat label="Score" value={`${result.score}/${maximumScore}`} />
           <ResultStat label="Time" value={formatTime(result.completionTimeSeconds)} />
           <ResultStat label="Typing speed" value={`${result.wordsPerMinute} WPM`} />
           <ResultStat label="Difficulty" value={result.difficulty} />
