@@ -14,6 +14,7 @@ import { auth } from "@/lib/firebase";
 import { getPracticeResults, getUserProfile, savePracticeResult, signIn, signOutUser, signUp } from "@/lib/auth";
 import { pickSessionQuestions } from "@/utils/questions";
 import { getWordsPerMinute } from "@/utils/scoring";
+import { getDailyPracticeStreak } from "@/utils/streak";
 import type { AnswerRecord, Difficulty, PortalRole, Question, SessionResult } from "@/types";
 
 type Screen = "home" | "practice" | "results" | "dashboard" | "auth" | "official";
@@ -83,6 +84,7 @@ export function GameShell() {
         .slice(0, 20),
     [results]
   );
+  const dailyStreak = useMemo(() => getDailyPracticeStreak(results), [results]);
 
   function persistResults(nextResults: SessionResult[]) {
     setResults(nextResults);
@@ -147,7 +149,7 @@ export function GameShell() {
             <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-600 text-xl text-gold-400 shadow-lg shadow-primary-600/20">✦</span>
             <span><span className="block text-xl font-black leading-none tracking-tight text-primary-600 dark:text-white">Spelling Rumble</span><span className="mt-1 block text-[10px] font-black tracking-[.16em] text-slate-400">LISTEN • TYPE • WIN</span></span>
           </button>
-          <div className="flex items-center gap-3"><span className="hidden rounded-full bg-gold-100 px-3 py-1.5 text-xs font-black text-[#527d18] sm:block">⚡ Daily streak: 3</span><ThemeToggle darkMode={darkMode} onToggle={() => setDarkMode((value) => !value)} /></div>
+          <div className="flex items-center gap-3"><span className="hidden rounded-full bg-gold-100 px-3 py-1.5 text-xs font-black text-[#527d18] sm:block">⚡ Daily streak: {dailyStreak}</span><ThemeToggle darkMode={darkMode} onToggle={() => setDarkMode((value) => !value)} /></div>
         </header>
 
         <nav id="main-menu" aria-label="Main menu" className="mb-6 rounded-2xl border border-primary-100 bg-white p-2 shadow-soft dark:border-slate-700 dark:bg-slate-800">
